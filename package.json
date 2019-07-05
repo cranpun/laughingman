@@ -1,12 +1,12 @@
 {
   "name": "laughingman",
   "version": "1.0.0",
-  "description": "",
-  "main": "main.js",
+  "description": "make you laufingman! ()this is joke app ",
+  "main": "index.html",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC"
+  "author": "cranpun",
+  "license": "MIT"
 }
