@@ -4,6 +4,10 @@ const main = async () => {
         const myvideo = document.querySelector("#myvideo");
         let vwidth = 0;
         let vheight = 0;
+        // 前回の値。
+        let pre = { wh: 0, x: 0, y: 0 };
+        const threshold = { wh: 30, x: 20, y: 20 };
+        const spread = 2.4;
 
         // 表示するキャンバス。videoとアイコンのレイヤ。読み込み順によって重ね順が変わるのを防ぐため2枚用意。
         const mycanvasicon = document.querySelector("#mycanvasicon");
@@ -20,17 +24,27 @@ const main = async () => {
             loadedmyicon = true;
         }
 
+        /**
+         * しきい値をもとに今回の値を算出
+         */
+        const calcNowVal = (nowval, field) => {
+            const ret = Math.abs(nowval - pre[field]) >= threshold[field] ? nowval : pre[field];
+            pre[field] = ret; // 前回の値を更新
+            return ret;
+        };
+
         // 顔認識のインスタンス化
         const detector = new FaceDetector();
 
         // アイコンサイズの補正
         const fixPosWH = (box) => {
             // whの大きい方を基準に拡大して、位置をその分左上にずらす
-            const max = Math.max(box.width, box.height);
-            const wh = max * 2;
+            const nowmax = Math.max(box.width, box.height);
+            const max = calcNowVal(nowmax, "wh");
+            const wh = max * spread;
             const offset = (wh - max) / 2; // ずらすのは増加分の半分。残り半分は右下に伸ばす
-            const x = box.x - offset;
-            const y = box.y - offset;
+            const x = calcNowVal(box.x - offset, "x");
+            const y = calcNowVal(box.y - offset, "y");
 
             return {
                 wh: wh,
