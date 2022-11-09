@@ -1,27 +1,57 @@
 import * as Icons from "./Icons.js";
 
+
+// MYTODO マルチ対応
+// MYTODO アイコンの縦横比対応
+
 export class TickOnly {
     constructor(elements) {
         this.myicon;
         this.loadedmyicon;
+        this.clearTimes = 0;
 
         this.elements = elements;
         this.detector = new FaceDetector();
-        this.pre = {wh: 0, x: 0, y: 0 };
+        this.pre = { wh: 0, x: 0, y: 0 };
         this.icon = Icons.laugh;
         this.setImage();
     }
-
-
 
     /**
      * しきい値をもとに今回の値を算出
      */
     calcNowVal(nowval, field) {
-        const threshold = { wh: 30, x: 20, y: 20 };
+        if(this.pre[field] === 0) {
+            // 前回値がないので、この値でOK
+            this.pre[field] = nowval;
+            return nowval;
+        }
+        const threshold = {
+            wh: {
+                min: 30,
+                max: 40,
+            },
+            x: {
+                min: 20,
+                max: 100,
+            },
+            y: {
+                min: 20,
+                max: 100,
+            }
+        };
         // 大きく場所を移動していないのであれば前回の位置のままとする
-        const ret = Math.abs(nowval - this.pre[field]) >= threshold[field] ? nowval : this.pre[field];
-        return ret;
+        const diff = Math.abs(nowval - this.pre[field]);
+        if (threshold[field].min <= diff && diff <= threshold[field].max) {
+            // if(field === "wh") {
+            //     console.log(diff);
+            // }
+            this.pre[field] = nowval;
+            return nowval;
+        } else {
+            // いきなり動いたので前回の値を利用
+            return this.pre[field];
+        }
     };
 
     // アイコンサイズの補正
@@ -77,27 +107,28 @@ export class TickOnly {
     // };
 
     // ビデオ更新のたびに実行
-    async exec(){
+    async exec() {
         try {
             let pos;
             if (this.loadedmyicon) {
                 const detects = await this.detector.detect(this.elements.myvideo);
+                this.elements.myctxicon.clearRect(0, 0, this.elements.vwidth, this.elements.vheight);
                 if (detects.length > 0) {
                     // 今回検知できたものがあれば以前のアイコンをクリア
-                    this.elements.myctxicon.clearRect(0, 0, this.elements.vwidth, this.elements.vheight);
                     const detect = detects[0];
 
                     const box = detect.boundingBox;
                     pos = this.fixPosWH(box);
+                    this.clearTimes = 0;
                 } else {
                     // 今回は検出できなかったので前回の値を利用
                     pos = this.pre;
+                    this.clearTimes++;
                 }
                 // 検出した顔にアイコンを表示
-                if (pos) {
+                if (pos && this.clearTimes < 3) {
                     this.elements.myctxicon.drawImage(this.myicon, pos.x, pos.y, pos.wh, pos.wh);
                 }
-                this.elements.myctxvideo.drawImage(this.elements.myvideo, 0, 0, this.elements.vwidth, this.elements.vheight);
             }
         } catch (e) {
             console.error(e);
