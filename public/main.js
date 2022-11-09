@@ -1,141 +1,29 @@
-import * as test from "./data.js";
+import { nh_nohmi, nh_ratix, nh_toys, laugh } from "./Icons.js";
+import { VideoCanvas } from "./VideoCanvas.js";
+import { TickNo } from "./TickNo.js";
+import { TickOnly } from "./TickOnly.js";
+
 const main = async () => {
-    console.log(test.test);
-
-    // const nowparam = laugh;
-    const nowparam = nh_ratix;
-
     try {
-        // 読み取った画像とそのサイズ
-        const myvideo = document.querySelector("#myvideo");
-        let vwidth = 0;
-        let vheight = 0;
-        // 前回の値。
-        let pre = { wh: 0, x: 0, y: 0 };
-        const threshold = { wh: 30, x: 20, y: 20 };
-        const spread = nowparam.spread;
+        const elements = new VideoCanvas();
+        elements.init();
+        const tick = new TickNo(elements);
+        elements.setTickFunc(() => tick.exec());
+        await elements.start();
 
-        // 表示するキャンバス。videoとアイコンのレイヤ。読み込み順によって重ね順が変わるのを防ぐため2枚用意。
-        const mycanvasicon = document.querySelector("#mycanvasicon");
-        const myctxicon = mycanvasicon.getContext("2d");
-        myctxicon.strokeText("now loading ...", 10, 10);
-        const mycanvasvideo = document.querySelector("#mycanvasvideo");
-        const myctxvideo = mycanvasvideo.getContext("2d");
-
-        // 顔に表示するアイコンと読み込み待ちフラグ
-        const myicon = new Image();
-        myicon.src = nowparam.path;
-        let loadedmyicon = false;
-        myicon.onload = () => {
-            loadedmyicon = true;
-        }
-
-        /**
-         * しきい値をもとに今回の値を算出
-         */
-        const calcNowVal = (nowval, field) => {
-            const ret = Math.abs(nowval - pre[field]) >= threshold[field] ? nowval : pre[field];
-            pre[field] = ret; // 前回の値を更新
-            return ret;
-        };
-
-        // 顔認識のインスタンス化
-        const detector = new FaceDetector();
-
-        // アイコンサイズの補正
-        const fixPosWH = (box) => {
-            // whの大きい方を基準に拡大して、位置をその分左上にずらす
-            const nowmax = Math.max(box.width, box.height);
-            const max = calcNowVal(nowmax, "wh");
-            const wh = max * spread;
-            const offset = (wh - max) / 2; // ずらすのは増加分の半分。残り半分は右下に伸ばす
-            const x = calcNowVal(box.x - offset, "x") + (offset * nowparam.xoffset);
-            const y = calcNowVal(box.y - offset, "y") + (offset * nowparam.yoffset);
-
-            return {
-                wh: wh,
-                x: x,
-                y: y,
-            };
-        }
-
-        // ビデオ更新のたびに実行
-        const tickMulti = async () => {
-            try {
-                if (loadedmyicon) {
-                    const detects = await detector.detect(myvideo);
-
-                    if (detects.length > 0) {
-                        // 今回検知できたものがあれば以前のアイコンをクリア
-                        myctxicon.clearRect(0, 0, vwidth, vheight);
-
-                        // 検出した顔すべてにアイコンを表示
-                        for (const detect of detects) {
-                            const box = detect.boundingBox;
-                            const pos = fixPosWH(box);
-                            myctxicon.drawImage(myicon, pos.x, pos.y, pos.wh, pos.wh);
-                        }
-                    }
-                    myctxvideo.drawImage(myvideo, 0, 0, vwidth, vheight);
+        document.querySelectorAll(".radiotick").forEach(radio => {
+            radio.addEventListener("change", (ev) => {
+                const target = ev.target;
+                if(target.id === "tick-no") {
+                    const tick = new TickNo(elements);
+                    elements.setTickFunc(() => tick.exec());
+                } else {
+                    const tick = new TickOnly(elements);
+                    elements.setTickFunc(() => tick.exec());
                 }
-                window.requestAnimationFrame(tickMulti);
-            } catch (e) {
-                console.error(e);
-            }
-        };
+            });
+        });
 
-        // ビデオ更新のたびに実行
-        let prepos = null;
-        const tickOnly = async () => {
-            try {
-                if (loadedmyicon) {
-                    const detects = await detector.detect(myvideo);
-                    let pos = prepos;
-                    if (detects.length > 0) {
-                        // 今回検知できたものがあれば以前のアイコンをクリア
-                        myctxicon.clearRect(0, 0, vwidth, vheight);
-                        detect = detects[0];
-
-                        const box = detect.boundingBox;
-                        pos = fixPosWH(box);
-                        prepos = pos;
-                    } else {
-                        // 今回は検出できなかったので前回の値を利用
-                        pos = prepos;
-                    }
-                    // 検出した顔にアイコンを表示
-                    if (pos) {
-                        myctxicon.drawImage(myicon, pos.x, pos.y, pos.wh, pos.wh);
-                    }
-                    myctxvideo.drawImage(myvideo, 0, 0, vwidth, vheight);
-                }
-                window.requestAnimationFrame(tickOnly);
-            } catch (e) {
-                console.error(e);
-            }
-        };
-
-        const tickNo = async () => {
-            try {
-                if (loadedmyicon) {
-                    myctxvideo.drawImage(myvideo, 0, 0, vwidth, vheight);
-                }
-                window.requestAnimationFrame(tickNo);
-            } catch (e) {
-                console.error(e);
-            }
-        }
-
-        // カメラの取得
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        myvideo.srcObject = stream;
-        myvideo.onloadedmetadata = async (e) => {
-            // 撮影開始
-            myvideo.play();
-            mycanvasicon.width = mycanvasvideo.width = vwidth = myvideo.videoWidth;
-            mycanvasicon.height = mycanvasvideo.height = vheight = myvideo.videoHeight;
-            await tickOnly();
-        };
     } catch (e) {
         console.error(e);
     }

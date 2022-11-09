@@ -3,14 +3,23 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <script src="./main.js" type="module"></script>
+    <title>laughingman</title>
 </head>
 
 <body>
-    <video id="myvideo" autoplay style="visibility: hidden"></video>
-    <div id="canvases" style="position: relative">
-        <canvas id="mycanvasvideo" class="mycanvas" style="position: fixed; top: 0; left: 0;"></canvas>
-        <canvas id="mycanvasicon" class="mycanvas" style="position: fixed; top: 0; left: 0;"></canvas>
-    </div>
+    <section id="control">
+        <fieldset>
+            <input type="radio" id="tick-no" class="radiotick" name="radiotick" value="no" checked><label for="tick-no">no</label>
+            <input type="radio" id="tick-only" class="radiotick" name="radiotick" value="only"><label for="tick-only">only</label>
+        </fieldset>
+    </section>
+    <section id="display">
+        <video id="myvideo" autoplay style="display: none"></video>
+        <div id="canvases" style="position: relative">
+            <canvas id="mycanvasvideo" class="mycanvas" style="position: absolute; top: 0; left: 0;"></canvas>
+            <canvas id="mycanvasicon" class="mycanvas" style="position: absolute; top: 0; left: 0;"></canvas>
+        </div>
+    </section>
 </body>
 
 </html>
