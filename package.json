@@ -1,12 +1,23 @@
 {
   "name": "laughingman",
   "version": "1.0.0",
-  "description": "make you laufingman! ()this is joke app ",
-  "main": "index.html",
+  "description": "make you laugfingman! (this is joke app)",
+  "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "npx http-server public -c-1 . --ssl --key ./sslkey/_wildcard.dev.ll+2-key.pem --cert ./sslkey/_wildcard.dev.ll+2.pem"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cranpun/laughingman.git"
   },
   "keywords": [],
-  "author": "cranpun",
-  "license": "MIT"
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/cranpun/laughingman/issues"
+  },
+  "homepage": "https://github.com/cranpun/laughingman#readme",
+  "dependencies": {
+    "http-server": "^14.1.1"
+  }
 }
