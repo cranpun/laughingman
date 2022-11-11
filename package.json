@@ -4,7 +4,7 @@
   "description": "make you laugfingman! (this is joke app)",
   "main": "index.js",
   "scripts": {
-    "start": "npx http-server public -c-1 . --ssl --key ./sslkey/_wildcard.dev.ll+2-key.pem --cert ./sslkey/_wildcard.dev.ll+2.pem"
+    "start": "npx http-server public -p 443 -c-1 --ssl --key ./sslkey/_wildcard.dev.ll+2-key.pem --cert ./sslkey/_wildcard.dev.ll+2.pem"
   },
   "repository": {
     "type": "git",

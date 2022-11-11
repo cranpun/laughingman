@@ -1,4 +1,3 @@
-import { nh_nohmi, nh_ratix, nh_toys, laugh } from "./Icons.js";
 import { VideoCanvas } from "./VideoCanvas.js";
 import { TickNo } from "./TickNo.js";
 import { TickOnly } from "./TickOnly.js";
@@ -7,7 +6,7 @@ const main = async () => {
     try {
         const elements = new VideoCanvas();
         elements.init();
-        const tick = new TickNo(elements);
+        const tick = new TickOnly(elements);
         elements.setTickFunc(() => tick.exec());
         await elements.start();
 

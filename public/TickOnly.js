@@ -2,79 +2,113 @@ import * as Icons from "./Icons.js";
 
 
 // MYTODO マルチ対応
-// MYTODO アイコンの縦横比対応
+
+class Basesize {
+    constructor(base, size) {
+        this.base = base;
+        this.size = size;
+    }
+}
+class Sizepos {
+    constructor() {
+        this.basesize = new Basesize(0, "");
+        this.zoom = 0;
+        this.width = 0;
+        this.height = 0;
+        this.x = 0;
+        this.y = 0;
+    }
+}
 
 export class TickOnly {
     constructor(elements) {
-        this.myicon;
-        this.loadedmyicon;
-        this.clearTimes = 0;
+        this.myicon; // アイコンの画像データ
+        this.loadedmyicon; // アイコンのロードフラグ
+        this.lostCount = 0; // ロストした回数。これが規定回数以内であれば前回の表示を継続
 
         this.elements = elements;
         this.detector = new FaceDetector();
-        this.pre = { wh: 0, x: 0, y: 0 };
-        this.icon = Icons.laugh;
+        this.sizepos = new Sizepos();
+        this.iconparam = Icons.icons.laugh; // 読み込む画像のパラメータ
         this.setImage();
     }
 
     /**
      * しきい値をもとに今回の値を算出
      */
-    calcNowVal(nowval, field) {
-        if(this.pre[field] === 0) {
+    shouldBeUpdate(nowval, field) {
+        if (this.sizepos[field] === 0) {
             // 前回値がないので、この値でOK
-            this.pre[field] = nowval;
-            return nowval;
+            return true;
         }
-        const threshold = {
-            wh: {
+        // 変化させる範囲。これより大きい変動だと、誤検知の可能性があるので調整しない
+        const diffThreshold = {
+            width: {
+                min: 30,
+                max: 40,
+            },
+            height: {
                 min: 30,
                 max: 40,
             },
             x: {
-                min: 20,
-                max: 100,
+                min: 40,
+                max: 100000,
             },
             y: {
-                min: 20,
-                max: 100,
+                min: 40,
+                max: 100000,
             }
         };
         // 大きく場所を移動していないのであれば前回の位置のままとする
-        const diff = Math.abs(nowval - this.pre[field]);
-        if (threshold[field].min <= diff && diff <= threshold[field].max) {
+        const diff = Math.abs(nowval - this.sizepos[field]);
+        if (diffThreshold[field].min <= diff && diff <= diffThreshold[field].max) {
             // if(field === "wh") {
             //     console.log(diff);
             // }
-            this.pre[field] = nowval;
-            return nowval;
+            return true;
         } else {
             // いきなり動いたので前回の値を利用
-            return this.pre[field];
+            return false;
         }
     };
 
-    // アイコンサイズの補正
-    fixPosWH(box) {
-        // whの大きい方を基準に拡大して、位置をその分左上にずらす
-        const nowmax = Math.max(box.width, box.height);
-        const max = this.calcNowVal(nowmax, "wh");
-        const wh = max * this.icon.spread;
-        const offset = (wh - max) / 2; // ずらすのは増加分の半分。残り半分は右下に伸ばす
-        const x = this.calcNowVal(box.x - offset, "x") + (offset * this.icon.xoffset);
-        const y = this.calcNowVal(box.y - offset, "y") + (offset * this.icon.yoffset);
+    getBaseSize(width, height) {
+        if (width > height) {
+            return {
+                size: width,
+                base: "width"
+            }
+        } else {
+            return {
+                size: height,
+                base: "height"
+            }
+        }
+    }
 
-        return {
-            wh: wh,
-            x: x,
-            y: y,
-        };
+    // アイコンサイズの補正
+    updateSizepos(box) {
+        // whの大きい方を基準に拡大・縮小
+        const basesize = this.getBaseSize(box.width, box.height);
+        if (this.shouldBeUpdate(basesize.size, basesize.base)) {
+            this.sizepos.basesize = basesize;
+            this.sizepos.zoom = box[basesize.base] / this.iconparam[basesize.base] * this.iconparam.zoom;
+            this.sizepos.width = this.iconparam.width * this.sizepos.zoom * 2.5;
+            this.sizepos.height = this.iconparam.height * this.sizepos.zoom * 2.5;
+        }
+
+        //　位置：検知した位置は中心なので、そこから今回のzoomに従ってずらす。
+        const x = box.x - (this.sizepos.width / 2) + (this.sizepos.zoom * this.iconparam.xoffset);
+        this.sizepos.x = this.shouldBeUpdate(x, "x") ? x : this.sizepos.x;
+        const y = box.y - (this.sizepos.height / 2) + (this.sizepos.zoom * this.iconparam.yoffset);
+        this.sizepos.y = this.shouldBeUpdate(y, "y") ? y : this.sizepos.y;
     }
 
     setImage() {
         // 顔に表示するアイコンと読み込み待ちフラグ
         this.myicon = new Image();
-        this.myicon.src = this.icon.path;
+        this.myicon.src = this.iconparam.path;
         this.loadedmyicon = false;
         this.myicon.onload = () => {
             this.loadedmyicon = true;
@@ -118,16 +152,18 @@ export class TickOnly {
                     const detect = detects[0];
 
                     const box = detect.boundingBox;
-                    pos = this.fixPosWH(box);
-                    this.clearTimes = 0;
+                    this.updateSizepos(box);
+                    this.lostCount = 0;
                 } else {
                     // 今回は検出できなかったので前回の値を利用
-                    pos = this.pre;
-                    this.clearTimes++;
+                    this.lostCount++;
                 }
                 // 検出した顔にアイコンを表示
-                if (pos && this.clearTimes < 3) {
-                    this.elements.myctxicon.drawImage(this.myicon, pos.x, pos.y, pos.wh, pos.wh);
+                if (this.lostCount < 30) {
+                    this.elements.myctxicon.drawImage(this.myicon, this.sizepos.x, this.sizepos.y, this.sizepos.width, this.sizepos.height);
+                } else {
+                    // 未検出が一定数を超えたのでsizeposを初期化
+                    this.sizepos = new Sizepos();
                 }
             }
         } catch (e) {
