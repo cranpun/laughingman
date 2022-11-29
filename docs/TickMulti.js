@@ -1,8 +1,5 @@
 import * as Icons from "./Icons.js";
 
-
-// MYTODO マルチ対応
-
 class Basesize {
     constructor(base, size) {
         this.base = base;
@@ -20,7 +17,7 @@ class Sizepos {
     }
 }
 
-export class TickOnly {
+export class TickMulti {
     constructor(elements) {
         this.myicon; // アイコンの画像データ
         this.loadedmyicon; // アイコンのロードフラグ
@@ -28,15 +25,17 @@ export class TickOnly {
 
         this.elements = elements;
         this.detector = new FaceDetector();
-        this.sizepos = new Sizepos();
-        this.iconparam = Icons.icons.laugh; // 読み込む画像のパラメータ
+        this.iconparam = Icons.icons.nh_ratix; // 読み込む画像のパラメータ
         this.setImage();
+
+        this.sizeposs = [];
     }
 
     /**
      * しきい値をもとに今回の値を算出
      */
     shouldBeUpdate(nowval, field) {
+        return true;
         if (this.sizepos[field] === 0) {
             // 前回値がないので、この値でOK
             return true;
@@ -115,31 +114,6 @@ export class TickOnly {
         }
     }
 
-    // // ビデオ更新のたびに実行
-    // const tickMulti = async () => {
-    //     try {
-    //         if (loadedmyicon) {
-    //             const detects = await detector.detect(myvideo);
-
-    //             if (detects.length > 0) {
-    //                 // 今回検知できたものがあれば以前のアイコンをクリア
-    //                 myctxicon.clearRect(0, 0, vwidth, vheight);
-
-    //                 // 検出した顔すべてにアイコンを表示
-    //                 for (const detect of detects) {
-    //                     const box = detect.boundingBox;
-    //                     const pos = fixPosWH(box);
-    //                     myctxicon.drawImage(myicon, pos.x, pos.y, pos.wh, pos.wh);
-    //                 }
-    //             }
-    //             myctxvideo.drawImage(myvideo, 0, 0, vwidth, vheight);
-    //         }
-    //         window.requestAnimationFrame(tickMulti);
-    //     } catch (e) {
-    //         console.error(e);
-    //     }
-    // };
-
     // ビデオ更新のたびに実行
     async exec() {
         try {
@@ -149,21 +123,22 @@ export class TickOnly {
                 this.elements.myctxicon.clearRect(0, 0, this.elements.vwidth, this.elements.vheight);
                 if (detects.length > 0) {
                     // 今回検知できたものがあれば以前のアイコンをクリア
-                    const detect = detects[0];
+                    for (const detect of detects) {
+                        const box = detect.boundingBox;
 
-                    const box = detect.boundingBox;
-                    this.updateSizepos(box);
-                    this.lostCount = 0;
+                        // 縦横の比率に応じて補正
+                        const basesize = this.getBaseSize(box.width, box.height);
+                        const zoom = basesize.size / this.iconparam[basesize.base];
+                        const width = this.iconparam.width * zoom * 2.5;
+                        const height = this.iconparam.height * zoom * 2.5;
+                        const x = box.x - (width / 2) + (zoom * this.iconparam.xoffset);
+                        const y = box.y - (height / 2) + (zoom * this.iconparam.yoffset);
+
+                        this.elements.myctxicon.drawImage(this.myicon, x, y, width, height);
+                    }
                 } else {
                     // 今回は検出できなかったので前回の値を利用
                     this.lostCount++;
-                }
-                // 検出した顔にアイコンを表示
-                if (this.lostCount < 30) {
-                    this.elements.myctxicon.drawImage(this.myicon, this.sizepos.x, this.sizepos.y, this.sizepos.width, this.sizepos.height);
-                } else {
-                    // 未検出が一定数を超えたのでsizeposを初期化
-                    this.sizepos = new Sizepos();
                 }
             }
         } catch (e) {
